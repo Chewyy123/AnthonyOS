@@ -1,5 +1,13 @@
 print("LOADING MAIN.PY WITH INBOX ROUTES")
 
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Literal, Optional
