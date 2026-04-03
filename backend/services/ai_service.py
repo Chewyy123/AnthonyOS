@@ -6,18 +6,22 @@ from typing import List, Dict
 from openai import OpenAI
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=False)
 
-api_key = os.getenv("OPENAI_API_KEY")
 
-if not api_key:
-    raise ValueError("OPENAI_API_KEY not found in .env file")
+def get_openai_client() -> OpenAI:
+    api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
 
-client = OpenAI(api_key=api_key)
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY is missing.")
+
+    return OpenAI(api_key=api_key)
 
 
 def get_system_prompt(mode: str) -> str:
-    if mode == "Life":
+    normalized_mode = (mode or "").strip().lower()
+
+    if normalized_mode == "life":
         return """
 You are AnthonyOS Life, a practical life operating assistant for Anthony.
 
@@ -38,7 +42,7 @@ Behavior rules:
 - be practical, grounded, and specific
 """
 
-    if mode == "Dev":
+    if normalized_mode == "dev":
         return """
 You are AnthonyOS Dev, a strong web development and coding assistant for Anthony.
 
@@ -66,16 +70,20 @@ Be clear, helpful, and context-aware.
 
 
 def ask_ai(prompt: str, mode: str, history: List[Dict[str, str]]):
+    client = get_openai_client()
     system_prompt = get_system_prompt(mode)
 
     messages = [{"role": "system", "content": system_prompt}]
 
     for item in history[-12:]:
-        if item["role"] in ["user", "assistant"] and item["content"].strip():
+        role = item.get("role", "")
+        content = item.get("content", "")
+
+        if role in ["user", "assistant"] and isinstance(content, str) and content.strip():
             messages.append(
                 {
-                    "role": item["role"],
-                    "content": item["content"]
+                    "role": role,
+                    "content": content
                 }
             )
 
@@ -98,6 +106,8 @@ def generate_home_briefing(
     recent_conversation_count: int,
     top_tasks: List[Dict[str, str]],
 ):
+    client = get_openai_client()
+
     system_prompt = """
 You are AnthonyOS Home, an intelligent command-center briefing assistant for Anthony.
 
@@ -151,7 +161,9 @@ Top tasks:
 
 
 def suggest_task_metadata(title: str, details: str, mode: str):
+    client = get_openai_client()
     today = date.today()
+
     fallback = {
         "priority": "medium",
         "dueDate": "",
@@ -218,6 +230,8 @@ Task details:
 
 
 def generate_yahoo_inbox_briefing(unread_count: int, emails: List[Dict[str, str]]):
+    client = get_openai_client()
+
     fallback = {
         "summary": "Your inbox was reviewed, but the structured classification failed. Try refreshing again.",
         "securityAlerts": [],
